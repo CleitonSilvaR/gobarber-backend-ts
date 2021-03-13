@@ -1,4 +1,5 @@
 import { startOfHour } from "date-fns";
+import { getCustomRepository } from 'typeorm';
 import Appointment from "../models/Appointment";
 import AppointmentsRepository from "../repositories/AppointmentsRepository";
 
@@ -8,23 +9,19 @@ interface Request {
 }
 
 class CreateAppointmentService {
-    private appointmentsRepository: AppointmentsRepository;
+    public async execute({ date, provider }: Request): Promise<Appointment> {
+        const appointmentsRepository = getCustomRepository(AppointmentsRepository);
 
-    constructor(appointmentsRepository: AppointmentsRepository) {
-        this.appointmentsRepository = appointmentsRepository;
-    }
-
-    public execute({ date, provider }: Request): Appointment {
         const appointmentDate = startOfHour(date);
 
-        const findAppointmentInSameDate = this.appointmentsRepository.findBydate(appointmentDate);
+        const findAppointmentInSameDate = await appointmentsRepository.findBydate(appointmentDate);
 
         if (findAppointmentInSameDate) {
-            throw ('This appointment is alredy booked');
-            // return response.status(400).json({ message: 'This appointment is alredy booked' });
+            throw Error('This appointment is alredy booked');
         }
 
-        const appointment = this.appointmentsRepository.create({ provider, date: appointmentDate });
+        const appointment = appointmentsRepository.create({ provider, date: appointmentDate });
+        await appointmentsRepository.save(appointment);
 
         return appointment;
     }
